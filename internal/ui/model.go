@@ -8,12 +8,15 @@ import (
 	"github.com/shiroyashv/go-tetris-tui/internal/game"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type tickMsg time.Time
 
 type Model struct {
-	Game *game.Game
+	Game      *game.Game
+	WinWidth  int
+	WinHeight int
 }
 
 func NewModel() Model {
@@ -22,18 +25,23 @@ func NewModel() Model {
 	}
 }
 
-func tickCmd() tea.Cmd {
-	return tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+func tickCmd(duration time.Duration) tea.Cmd {
+	return tea.Tick(duration, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
 }
 
 func (m Model) Init() tea.Cmd {
-	return tickCmd()
+	return tickCmd(m.Game.TickRate)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		m.WinWidth = msg.Width
+		m.WinHeight = msg.Height
+		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -51,47 +59,94 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		m.Game.Update()
-		return m, tickCmd()
+		return m, tickCmd(m.Game.TickRate)
 	}
 
 	return m, nil
 }
 
 func (m Model) View() string {
-	s := fmt.Sprintf("Score: %d\n\n", m.Game.Score)
+	// Safety check for small windows
+	if m.WinWidth > 0 && (m.WinWidth < 40 || m.WinHeight < 24) {
+		return lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center, "Window too small!")
+	}
 
+	// 1. GAME OVER VIEW
+	if m.Game.GameOver {
+		title := HeaderStyle.Render("GAME OVER")
+		score := fmt.Sprintf("Final Score\n%d", m.Game.Score)
+		help := LabelStyle.Render("Press 'q' to quit")
+
+		content := lipgloss.JoinVertical(lipgloss.Center, title, "\n", score, "\n\n", help)
+		return AppStyle.Render(lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center, content))
+	}
+
+	// 2. RENDER BOARD
+	var boardView string
 	for y := 0; y < config.BoardHeight; y++ {
-
-		s += "<!"
-
 		for x := 0; x < config.BoardWidth; x++ {
-			isPiece := false
+			color := 0
 
+			// Check active piece
 			pX := x - m.Game.Piece.X
 			pY := y - m.Game.Piece.Y
-
 			if pX >= 0 && pX < len(m.Game.Piece.Shape[0]) &&
 				pY >= 0 && pY < len(m.Game.Piece.Shape) {
-
 				if m.Game.Piece.Shape[pY][pX] == 1 {
-					isPiece = true
+					color = m.Game.Piece.Color
 				}
 			}
 
-			if isPiece {
-				s += "[]"
-			} else if m.Game.Grid[y][x] == 1 {
-				s += "##"
-			} else {
-				s += " ."
+			// Check grid
+			if color == 0 {
+				color = m.Game.Grid[y][x]
 			}
+
+			boardView += renderBlock(color, x, y)
 		}
-
-		s += "!>\n"
+		if y < config.BoardHeight-1 {
+			boardView += "\n"
+		}
 	}
+	boardBox := BoardStyle.Render(boardView)
 
-	s += "<!====================!>\n"
-	s += "\nPress 'q' to quit."
+	// 3. RENDER SIDEBAR (Stats)
+	scoreBlock := lipgloss.JoinVertical(lipgloss.Left,
+		LabelStyle.Render("SCORE"),
+		ValueStyle.Render(fmt.Sprintf("%d", m.Game.Score)),
+	)
 
-	return s
+	// Calculate level based on TickRate (just for display fun)
+	level := 1 + (800-int(m.Game.TickRate.Milliseconds()))/20
+	levelBlock := lipgloss.JoinVertical(lipgloss.Left,
+		LabelStyle.Render("LEVEL"),
+		ValueStyle.Render(fmt.Sprintf("%d", level)),
+	)
+
+	controls := LabelStyle.Render("CONTROLS\n\n←/→ Move\n↑   Rotate\n↓   Drop\nq   Quit")
+
+	statsBox := StatsBoxStyle.Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			HeaderStyle.Render("TETRIS"),
+			"\n",
+			scoreBlock,
+			"\n",
+			levelBlock,
+			"\n\n",
+			controls,
+		),
+	)
+
+	// 4. COMBINE
+	mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, boardBox, statsBox)
+
+	return AppStyle.Render(
+		lipgloss.Place(
+			m.WinWidth,
+			m.WinHeight,
+			lipgloss.Center,
+			lipgloss.Center,
+			mainLayout,
+		),
+	)
 }

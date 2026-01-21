@@ -2,6 +2,11 @@ package game
 
 type Tetromino [][]int
 
+type PiecePreset struct {
+	Shape Tetromino
+	Color int
+}
+
 var (
 	PieceI = Tetromino{
 		{0, 0, 0, 0},
@@ -45,7 +50,7 @@ var (
 		{0, 0, 0},
 	}
 
-	AllPieces = []Tetromino{PieceI, PieceJ, PieceL, PieceO, PieceS, PieceT, PieceZ}
+	AllPieces = []PiecePreset{{PieceI, 1}, {PieceJ, 2}, {PieceL, 3}, {PieceO, 4}, {PieceS, 5}, {PieceT, 6}, {PieceZ, 7}}
 )
 
 type CurrentPiece struct {

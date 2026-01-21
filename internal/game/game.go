@@ -14,20 +14,23 @@ type Game struct {
 
 	Score    int
 	GameOver bool
+	TickRate time.Duration
 }
 
 func NewGame() *Game {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-	g := &Game{}
+	g := &Game{
+		TickRate: time.Millisecond * 800,
+	}
 	g.SpawnPiece()
 	return g
 }
 
 func (g *Game) SpawnPiece() {
-	shape := AllPieces[rand.Intn(len(AllPieces))]
+	preset := AllPieces[rand.Intn(len(AllPieces))]
 
 	g.Piece = CurrentPiece{
-		Shape: shape,
+		Shape: preset.Shape,
+		Color: preset.Color,
 		X:     config.BoardWidth/2 - 2,
 		Y:     0,
 	}
@@ -60,7 +63,7 @@ func (g *Game) CheckCollision(x, y int, shape Tetromino) bool {
 				return true
 			}
 
-			if boardY >= 0 && g.Grid[boardY][boardX] == 1 {
+			if boardY >= 0 && g.Grid[boardY][boardX] > 0 {
 				return true
 			}
 		}
@@ -96,6 +99,13 @@ func (g *Game) ClearLines() {
 
 	if linesCleared > 0 {
 		g.Score += linesCleared * 100 * linesCleared
+
+		// Speed up
+		newRate := g.TickRate - time.Duration(linesCleared*20)*time.Millisecond
+		if newRate < 100*time.Millisecond {
+			newRate = 100 * time.Millisecond
+		}
+		g.TickRate = newRate
 	}
 }
 
@@ -108,7 +118,7 @@ func (g *Game) LockPiece() {
 
 				if boardY >= 0 && boardY < config.BoardHeight &&
 					boardX >= 0 && boardX < config.BoardWidth {
-					g.Grid[boardY][boardX] = 1
+					g.Grid[boardY][boardX] = g.Piece.Color
 				}
 			}
 		}
