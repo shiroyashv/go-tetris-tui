@@ -20,15 +20,11 @@ type Model struct {
 }
 
 func NewModel() Model {
-	return Model{
-		Game: game.NewGame(),
-	}
+	return Model{Game: game.NewGame()}
 }
 
 func tickCmd(duration time.Duration) tea.Cmd {
-	return tea.Tick(duration, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
+	return tea.Tick(duration, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
 func (m Model) Init() tea.Cmd {
@@ -37,12 +33,10 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.WindowSizeMsg:
 		m.WinWidth = msg.Width
 		m.WinHeight = msg.Height
 		return m, nil
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
@@ -56,97 +50,129 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down":
 			m.Game.Update()
 		}
-
 	case tickMsg:
 		m.Game.Update()
 		return m, tickCmd(m.Game.TickRate)
 	}
-
 	return m, nil
 }
 
+func renderFullWidth(text string, width int, align lipgloss.Position) string {
+	return lipgloss.NewStyle().
+		Width(width).
+		Background(CBackground).
+		Foreground(CForeground).
+		Align(align).
+		Render(text)
+}
+
 func (m Model) View() string {
-	// Safety check for small windows
-	if m.WinWidth > 0 && (m.WinWidth < 40 || m.WinHeight < 24) {
-		return lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center, "Window too small!")
+	if m.WinWidth > 0 && (m.WinWidth < 45 || m.WinHeight < 24) {
+		return lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center, "Window too small!",
+			lipgloss.WithWhitespaceBackground(CBackground))
 	}
 
-	// 1. GAME OVER VIEW
 	if m.Game.GameOver {
-		title := HeaderStyle.Render("GAME OVER")
-		score := fmt.Sprintf("Final Score\n%d", m.Game.Score)
-		help := LabelStyle.Render("Press 'q' to quit")
-
-		content := lipgloss.JoinVertical(lipgloss.Center, title, "\n", score, "\n\n", help)
-		return AppStyle.Render(lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center, content))
+		return lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center,
+			lipgloss.JoinVertical(lipgloss.Center,
+				renderFullWidth("GAME OVER", 20, lipgloss.Center),
+				renderFullWidth(fmt.Sprintf("Score: %d", m.Game.Score), 20, lipgloss.Center),
+				renderFullWidth("Press 'q'", 20, lipgloss.Center),
+			),
+			lipgloss.WithWhitespaceBackground(CBackground),
+		)
 	}
 
-	// 2. RENDER BOARD
 	var boardView string
 	for y := 0; y < config.BoardHeight; y++ {
 		for x := 0; x < config.BoardWidth; x++ {
 			color := 0
 
-			// Check active piece
 			pX := x - m.Game.Piece.X
 			pY := y - m.Game.Piece.Y
-			if pX >= 0 && pX < len(m.Game.Piece.Shape[0]) &&
-				pY >= 0 && pY < len(m.Game.Piece.Shape) {
+			if pX >= 0 && pX < len(m.Game.Piece.Shape[0]) && pY >= 0 && pY < len(m.Game.Piece.Shape) {
 				if m.Game.Piece.Shape[pY][pX] == 1 {
 					color = m.Game.Piece.Color
 				}
 			}
 
-			// Check grid
 			if color == 0 {
 				color = m.Game.Grid[y][x]
 			}
-
-			boardView += renderBlock(color, x, y)
+			boardView += RenderBlock(color, x, y)
 		}
 		if y < config.BoardHeight-1 {
 			boardView += "\n"
 		}
 	}
+
 	boardBox := BoardStyle.Render(boardView)
 
-	// 3. RENDER SIDEBAR (Stats)
-	scoreBlock := lipgloss.JoinVertical(lipgloss.Left,
-		LabelStyle.Render("SCORE"),
-		ValueStyle.Render(fmt.Sprintf("%d", m.Game.Score)),
-	)
+	const statsW = 22
 
-	// Calculate level based on TickRate (just for display fun)
-	level := 1 + (800-int(m.Game.TickRate.Milliseconds()))/20
-	levelBlock := lipgloss.JoinVertical(lipgloss.Left,
-		LabelStyle.Render("LEVEL"),
-		ValueStyle.Render(fmt.Sprintf("%d", level)),
-	)
+	lblStyle := lipgloss.NewStyle().Foreground(CComment).Background(CBackground).Bold(true)
+	valStyle := lipgloss.NewStyle().Foreground(CCyan).Background(CBackground)
 
-	controls := LabelStyle.Render("CONTROLS\n\n←/→ Move\n↑   Rotate\n↓   Drop\nq   Quit")
+	var nextView string
+	nextShape := m.Game.NextPiece.Shape
+	for r := 0; r < len(nextShape); r++ {
+		rowStr := ""
+		for c := 0; c < len(nextShape[r]); c++ {
+			if nextShape[r][c] == 1 {
+				rowStr += RenderPreviewBlock(m.Game.NextPiece.Color)
+			} else {
+				rowStr += RenderPreviewBlock(0)
+			}
+		}
+		nextView += lipgloss.NewStyle().Width(statsW).Align(lipgloss.Center).Background(CBackground).Render(rowStr)
+		if r < len(nextShape)-1 {
+			nextView += "\n"
+		}
+	}
 
-	statsBox := StatsBoxStyle.Render(
-		lipgloss.JoinVertical(lipgloss.Left,
-			HeaderStyle.Render("TETRIS"),
-			"\n",
-			scoreBlock,
-			"\n",
-			levelBlock,
-			"\n\n",
-			controls,
-		),
-	)
+	lines := []string{
+		lipgloss.NewStyle().Width(statsW).Background(CPurple).Foreground(CBackground).Bold(true).Align(lipgloss.Center).Render("TETRIS GO"),
+		renderFullWidth("", statsW, lipgloss.Left),
 
-	// 4. COMBINE
-	mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, boardBox, statsBox)
+		renderFullWidth(lblStyle.Render("NEXT"), statsW, lipgloss.Left),
+		nextView,
+		renderFullWidth("", statsW, lipgloss.Left),
 
-	return AppStyle.Render(
-		lipgloss.Place(
-			m.WinWidth,
-			m.WinHeight,
-			lipgloss.Center,
-			lipgloss.Center,
-			mainLayout,
-		),
+		renderFullWidth(lblStyle.Render("SCORE"), statsW, lipgloss.Left),
+		renderFullWidth(valStyle.Render(fmt.Sprintf("%d", m.Game.Score)), statsW, lipgloss.Left),
+		renderFullWidth("", statsW, lipgloss.Left),
+
+		renderFullWidth(lblStyle.Render("LEVEL"), statsW, lipgloss.Left),
+		renderFullWidth(valStyle.Render(fmt.Sprintf("%d", 1+(800-int(m.Game.TickRate.Milliseconds()))/50)), statsW, lipgloss.Left),
+
+		renderFullWidth("", statsW, lipgloss.Left),
+
+		renderFullWidth(lblStyle.Render("CONTROLS"), statsW, lipgloss.Left),
+		renderFullWidth("←/→ Move", statsW, lipgloss.Left),
+		renderFullWidth("↑   Rotate", statsW, lipgloss.Left),
+		renderFullWidth("↓   Drop", statsW, lipgloss.Left),
+		renderFullWidth("q   Quit", statsW, lipgloss.Left),
+	}
+
+	statsBox := StatsBoxStyle.Copy().
+		Height(config.BoardHeight).
+		Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+
+	gap := lipgloss.NewStyle().
+		Width(2).
+		Height(config.BoardHeight + 2). // Высота контента + рамки
+		Background(CBackground).
+		Render("")
+
+	mainLayout := lipgloss.JoinHorizontal(lipgloss.Top, boardBox, gap, statsBox)
+
+	return lipgloss.Place(
+		m.WinWidth,
+		m.WinHeight,
+		lipgloss.Center,
+		lipgloss.Center,
+		mainLayout,
+		lipgloss.WithWhitespaceBackground(CBackground),
+		lipgloss.WithWhitespaceForeground(CForeground),
 	)
 }

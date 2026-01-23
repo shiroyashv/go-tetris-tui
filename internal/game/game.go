@@ -10,7 +10,8 @@ import (
 type Game struct {
 	Grid [config.BoardHeight][config.BoardWidth]int
 
-	Piece CurrentPiece
+	Piece     CurrentPiece
+	NextPiece CurrentPiece
 
 	Score    int
 	GameOver bool
@@ -21,18 +22,27 @@ func NewGame() *Game {
 	g := &Game{
 		TickRate: time.Millisecond * 800,
 	}
+
+	preset := AllPieces[rand.Intn(len(AllPieces))]
+	g.NextPiece = CurrentPiece{
+		Shape: preset.Shape,
+		Color: preset.Color,
+	}
+
 	g.SpawnPiece()
 	return g
 }
 
 func (g *Game) SpawnPiece() {
-	preset := AllPieces[rand.Intn(len(AllPieces))]
 
-	g.Piece = CurrentPiece{
+	g.Piece = g.NextPiece
+	g.Piece.X = config.BoardWidth/2 - 2
+	g.Piece.Y = 0
+
+	preset := AllPieces[rand.Intn(len(AllPieces))]
+	g.NextPiece = CurrentPiece{
 		Shape: preset.Shape,
 		Color: preset.Color,
-		X:     config.BoardWidth/2 - 2,
-		Y:     0,
 	}
 }
 
@@ -100,7 +110,6 @@ func (g *Game) ClearLines() {
 	if linesCleared > 0 {
 		g.Score += linesCleared * 100 * linesCleared
 
-		// Speed up
 		newRate := g.TickRate - time.Duration(linesCleared*20)*time.Millisecond
 		if newRate < 100*time.Millisecond {
 			newRate = 100 * time.Millisecond
