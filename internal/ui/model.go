@@ -115,7 +115,19 @@ func (m Model) View() string {
 
 	var nextView string
 	nextShape := m.Game.NextPiece.Shape
+
 	for r := 0; r < len(nextShape); r++ {
+		isEmpty := true
+		for c := 0; c < len(nextShape[r]); c++ {
+			if nextShape[r][c] == 1 {
+				isEmpty = false
+				break
+			}
+		}
+		if isEmpty {
+			continue
+		}
+
 		rowStr := ""
 		for c := 0; c < len(nextShape[r]); c++ {
 			if nextShape[r][c] == 1 {
@@ -124,18 +136,31 @@ func (m Model) View() string {
 				rowStr += RenderPreviewBlock(0)
 			}
 		}
-		nextView += lipgloss.NewStyle().Width(statsW).Align(lipgloss.Center).Background(CBackground).Render(rowStr)
-		if r < len(nextShape)-1 {
+
+		if nextView != "" {
 			nextView += "\n"
 		}
+
+		nextView += lipgloss.NewStyle().
+			Width(statsW).
+			Align(lipgloss.Center).
+			Background(CBackground).
+			Render(rowStr)
 	}
+
+	nextPieceFixed := lipgloss.NewStyle().
+		Height(2).
+		Align(lipgloss.Center).
+		Width(statsW).
+		Background(CBackground).
+		Render(nextView)
 
 	lines := []string{
 		lipgloss.NewStyle().Width(statsW).Background(CPurple).Foreground(CBackground).Bold(true).Align(lipgloss.Center).Render("TETRIS GO"),
 		renderFullWidth("", statsW, lipgloss.Left),
 
 		renderFullWidth(lblStyle.Render("NEXT"), statsW, lipgloss.Left),
-		nextView,
+		nextPieceFixed,
 		renderFullWidth("", statsW, lipgloss.Left),
 
 		renderFullWidth(lblStyle.Render("SCORE"), statsW, lipgloss.Left),
