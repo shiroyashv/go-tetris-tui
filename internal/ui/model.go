@@ -199,6 +199,7 @@ func (m Model) View() string {
 		renderFullWidth("↑   Rotate", statsW, lipgloss.Left),
 		renderFullWidth("↓   Drop", statsW, lipgloss.Left),
 		renderFullWidth("q   Quit", statsW, lipgloss.Left),
+		renderFullWidth("p   Pause", statsW, lipgloss.Left),
 	}
 
 	statsBox := StatsBoxStyle.Copy().
