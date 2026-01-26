@@ -185,7 +185,7 @@ func (m Model) View() string {
 
 	gap := lipgloss.NewStyle().
 		Width(2).
-		Height(config.BoardHeight + 2). // Высота контента + рамки
+		Height(config.BoardHeight + 2).
 		Background(CBackground).
 		Render("")
 

@@ -73,7 +73,7 @@ func (g *Game) CheckCollision(x, y int, shape Tetromino) bool {
 				return true
 			}
 
-			if boardY >= 0 && g.Grid[boardY][boardX] > 0 {
+			if boardY >= 0 && g.Grid[boardY][boardX] != 0 {
 				return true
 			}
 		}
@@ -179,15 +179,21 @@ func (g *Game) Rotate() {
 		}
 	}
 
-	if !g.CheckCollision(g.Piece.X, g.Piece.Y, newShape) {
-		g.Piece.Shape = newShape
-	} else {
-		if !g.CheckCollision(g.Piece.X-1, g.Piece.Y, newShape) {
-			g.Piece.X--
+	kicks := []struct{ x, y int }{
+		{0, 0},
+		{1, 0},
+		{-1, 0},
+		{2, 0},
+		{-2, 0},
+	}
+
+	for _, k := range kicks {
+
+		if !g.CheckCollision(g.Piece.X+k.x, g.Piece.Y+k.y, newShape) {
 			g.Piece.Shape = newShape
-		} else if !g.CheckCollision(g.Piece.X+1, g.Piece.Y, newShape) {
-			g.Piece.X++
-			g.Piece.Shape = newShape
+			g.Piece.X += k.x
+			g.Piece.Y += k.y
+			return
 		}
 	}
 }
