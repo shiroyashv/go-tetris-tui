@@ -39,8 +39,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "q", "Q", "й", "Й", "ctrl+c":
 			return m, tea.Quit
+		case "p", "P", "з", "З":
+			m.Game.Paused = !m.Game.Paused
+			return m, nil
+		}
+
+		if m.Game.Paused || m.Game.GameOver {
+			return m, nil
+		}
+		switch msg.String() {
 		case "left":
 			m.Game.MoveLeft()
 		case "right":
@@ -51,7 +60,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Game.Update()
 		}
 	case tickMsg:
-		m.Game.Update()
+		if !m.Game.Paused && !m.Game.GameOver {
+			m.Game.Update()
+		}
 		return m, tickCmd(m.Game.TickRate)
 	}
 	return m, nil
@@ -78,6 +89,17 @@ func (m Model) View() string {
 				renderFullWidth("GAME OVER", 20, lipgloss.Center),
 				renderFullWidth(fmt.Sprintf("Score: %d", m.Game.Score), 20, lipgloss.Center),
 				renderFullWidth("Press 'q'", 20, lipgloss.Center),
+			),
+			lipgloss.WithWhitespaceBackground(CBackground),
+		)
+	}
+
+	if m.Game.Paused {
+		return lipgloss.Place(m.WinWidth, m.WinHeight, lipgloss.Center, lipgloss.Center,
+			lipgloss.JoinVertical(lipgloss.Center,
+				renderFullWidth("PAUSED", 20, lipgloss.Center),
+				lipgloss.NewStyle().Height(1).Background(CBackground).Render(""),
+				renderFullWidth("Press 'p' to resume", 20, lipgloss.Center),
 			),
 			lipgloss.WithWhitespaceBackground(CBackground),
 		)
