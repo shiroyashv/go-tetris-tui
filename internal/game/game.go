@@ -37,7 +37,7 @@ func (g *Game) SpawnPiece() {
 
 	g.Piece = g.NextPiece
 	g.Piece.X = config.BoardWidth/2 - 2
-	g.Piece.Y = 0
+	g.Piece.Y = -2
 
 	preset := AllPieces[rand.Intn(len(AllPieces))]
 	g.NextPiece = CurrentPiece{
@@ -55,6 +55,7 @@ func (g *Game) Update() {
 		g.Piece.Y++
 	} else {
 		g.LockPiece()
+		g.ClearLines()
 	}
 }
 
@@ -124,6 +125,11 @@ func (g *Game) LockPiece() {
 			if g.Piece.Shape[row][col] == 1 {
 				boardX := g.Piece.X + col
 				boardY := g.Piece.Y + row
+
+				if boardY < 0 {
+					g.GameOver = true
+					return
+				}
 
 				if boardY >= 0 && boardY < config.BoardHeight &&
 					boardX >= 0 && boardX < config.BoardWidth {
