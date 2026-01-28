@@ -42,6 +42,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "Q", "й", "Й", "ctrl+c":
 			return m, tea.Quit
+		case "r", "R", "к", "К":
+			m.Game = game.NewGame()
+			return m, nil
 		case "p", "P", "з", "З":
 			m.Game.Paused = !m.Game.Paused
 			return m, nil
@@ -107,6 +110,9 @@ func (m Model) View() string {
 			centerLine("GAME OVER", config.BoardWidth),
 			centerLine("", config.BoardWidth),
 			centerLine(fmt.Sprintf("SCORE: %d", m.Game.Score), config.BoardWidth),
+			centerLine("", config.BoardWidth),
+			centerLine("PRESS 'r'", config.BoardWidth),
+			centerLine("TO RESTART", config.BoardWidth),
 			centerLine("", config.BoardWidth),
 			centerLine("PRESS 'q'", config.BoardWidth),
 		}
@@ -219,6 +225,7 @@ func (m Model) View() string {
 		renderFullWidth("↑   Rotate", statsW, lipgloss.Left),
 		renderFullWidth("↓   Drop", statsW, lipgloss.Left),
 		renderFullWidth("p   Pause", statsW, lipgloss.Left),
+		renderFullWidth("r   Restart", statsW, lipgloss.Left),
 		renderFullWidth("q   Quit", statsW, lipgloss.Left),
 	}
 	statsBox := StatsBoxStyle.Copy().Height(config.BoardHeight).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
