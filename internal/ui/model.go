@@ -80,6 +80,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Game.Rotate()
 		case "down":
 			m.Game.Update()
+		case " ":
+			m.Game.HardDrop()
 		}
 	case tickMsg:
 		if !m.Game.Paused && !m.Game.GameOver {
@@ -250,7 +252,8 @@ func (m Model) View() string {
 		renderFullWidth(lblStyle.Render("CONTROLS"), statsW, lipgloss.Left),
 		renderFullWidth("←/→ Move", statsW, lipgloss.Left),
 		renderFullWidth("↑   Rotate", statsW, lipgloss.Left),
-		renderFullWidth("↓   Drop", statsW, lipgloss.Left),
+		renderFullWidth("↓   Down", statsW, lipgloss.Left),
+		renderFullWidth("Spc Hard Drop", statsW, lipgloss.Left),
 		renderFullWidth("p   Pause", statsW, lipgloss.Left),
 		renderFullWidth("r   Restart", statsW, lipgloss.Left),
 		renderFullWidth("q   Quit", statsW, lipgloss.Left),

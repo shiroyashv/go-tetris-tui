@@ -205,3 +205,23 @@ func (g *Game) Rotate() {
 		}
 	}
 }
+
+func (g *Game) HardDrop() {
+	dropHeight := 0
+	
+	for {
+		if g.CheckCollision(g.Piece.X, g.Piece.Y+1, g.Piece.Shape) {
+			break
+		}
+		g.Piece.Y++
+		dropHeight++
+	}
+
+	g.Score += dropHeight * 2
+
+	g.LockPiece()
+	
+	if !g.GameOver {
+		g.ClearLines()
+	}
+}
