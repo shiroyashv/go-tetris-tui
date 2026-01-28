@@ -43,14 +43,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "Q", "й", "Й", "ctrl+c":
 			return m, tea.Quit
 		case "r", "R", "к", "К":
-			m.Game = game.NewGame()
+			if m.Game.GameOver {
+				m.Game = game.NewGame()
+			} else if !m.Game.ConfirmRestart {
+				m.Game.Paused = true
+				m.Game.ConfirmRestart = true
+			}
+			return m, nil
+		case "y", "Y", "н", "Н":
+			if m.Game.ConfirmRestart {
+				m.Game = game.NewGame()
+			}
+			return m, nil
+		case "n", "N", "т", "Т":
+			if m.Game.ConfirmRestart {
+				m.Game.ConfirmRestart = false
+				m.Game.Paused = false
+			}
 			return m, nil
 		case "p", "P", "з", "З":
-			m.Game.Paused = !m.Game.Paused
+			if !m.Game.GameOver && !m.Game.ConfirmRestart {
+				m.Game.Paused = !m.Game.Paused
+			}
 			return m, nil
 		}
 
-		if m.Game.Paused || m.Game.GameOver {
+		if m.Game.Paused || m.Game.GameOver || m.Game.ConfirmRestart {
 			return m, nil
 		}
 		switch msg.String() {
@@ -116,7 +134,16 @@ func (m Model) View() string {
 			centerLine("", config.BoardWidth),
 			centerLine("PRESS 'q'", config.BoardWidth),
 		}
-	} else if m.Game.Paused {
+		} else if m.Game.ConfirmRestart { 
+			overlayLines = []string{
+				centerLine("RESTART?", config.BoardWidth),
+				centerLine("", config.BoardWidth),
+				centerLine("ARE YOU", config.BoardWidth),
+				centerLine("SURE?", config.BoardWidth),
+				centerLine("", config.BoardWidth),
+				centerLine("y / n", config.BoardWidth),
+		} 
+		} else if m.Game.Paused {
 		overlayLines = []string{
 			centerLine("PAUSED", config.BoardWidth),
 			centerLine("", config.BoardWidth),

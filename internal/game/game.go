@@ -16,6 +16,7 @@ type Game struct {
 	Score    int
 	GameOver bool
 	Paused   bool
+	ConfirmRestart bool
 	TickRate time.Duration
 }
 
