@@ -31,6 +31,14 @@ var StatsBoxStyle = lipgloss.NewStyle().
 	BorderBackground(CBackground).
 	Background(CBackground)
 
+var GhostStyle = lipgloss.NewStyle().
+	Background(CBackground).
+	Foreground(CCurrentLine)
+
+func RenderGhostBlock() string {
+	return GhostStyle.Render("░░")
+}
+
 func RenderBlock(colorID int, x, y int) string {
 	var color lipgloss.Color
 	if colorID > 0 && colorID < len(BlockColors) {

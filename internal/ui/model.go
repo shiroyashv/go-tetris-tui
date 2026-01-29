@@ -136,16 +136,16 @@ func (m Model) View() string {
 			centerLine("", config.BoardWidth),
 			centerLine("PRESS 'q'", config.BoardWidth),
 		}
-		} else if m.Game.ConfirmRestart { 
-			overlayLines = []string{
-				centerLine("RESTART?", config.BoardWidth),
-				centerLine("", config.BoardWidth),
-				centerLine("ARE YOU", config.BoardWidth),
-				centerLine("SURE?", config.BoardWidth),
-				centerLine("", config.BoardWidth),
-				centerLine("y / n", config.BoardWidth),
-		} 
-		} else if m.Game.Paused {
+	} else if m.Game.ConfirmRestart {
+		overlayLines = []string{
+			centerLine("RESTART?", config.BoardWidth),
+			centerLine("", config.BoardWidth),
+			centerLine("ARE YOU", config.BoardWidth),
+			centerLine("SURE?", config.BoardWidth),
+			centerLine("", config.BoardWidth),
+			centerLine("y / n", config.BoardWidth),
+		}
+	} else if m.Game.Paused {
 		overlayLines = []string{
 			centerLine("PAUSED", config.BoardWidth),
 			centerLine("", config.BoardWidth),
@@ -155,20 +155,40 @@ func (m Model) View() string {
 
 	overlayStartY := (config.BoardHeight - len(overlayLines)) / 2
 
+	ghostY := -100
+	if !m.Game.GameOver {
+		ghostY = m.Game.CalculateGhostY()
+	}
+
 	var boardView string
 	for y := 0; y < config.BoardHeight; y++ {
 		for x := 0; x < config.BoardWidth; x++ {
 
 			color := 0
+			isRealPiece := false
+			isGhostPiece := false
+
 			pX := x - m.Game.Piece.X
 			pY := y - m.Game.Piece.Y
 			if pX >= 0 && pX < len(m.Game.Piece.Shape[0]) && pY >= 0 && pY < len(m.Game.Piece.Shape) {
 				if m.Game.Piece.Shape[pY][pX] == 1 {
 					color = m.Game.Piece.Color
+					isRealPiece = true
 				}
 			}
 			if color == 0 {
 				color = m.Game.Grid[y][x]
+			}
+
+			if color == 0 && ghostY > -100 {
+				gX := x - m.Game.Piece.X
+				gY := y - ghostY
+
+				if gX >= 0 && gX < len(m.Game.Piece.Shape[0]) && gY >= 0 && gY < len(m.Game.Piece.Shape) {
+					if m.Game.Piece.Shape[gY][gX] == 1 {
+						isGhostPiece = true
+					}
+				}
 			}
 
 			var bg lipgloss.Color
@@ -196,9 +216,11 @@ func (m Model) View() string {
 				boardView += overlayStyle.
 					Background(bg).
 					Render(fmt.Sprintf(" %s", charToRender))
-			} else if color > 0 {
+			} else if isRealPiece || color > 0 {
 
 				boardView += lipgloss.NewStyle().Background(bg).Width(2).Render("  ")
+			} else if isGhostPiece {
+				boardView += RenderGhostBlock()
 			} else {
 				boardView += dotStyle.Render(" .")
 			}

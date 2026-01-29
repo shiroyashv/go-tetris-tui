@@ -13,11 +13,11 @@ type Game struct {
 	Piece     CurrentPiece
 	NextPiece CurrentPiece
 
-	Score    int
-	GameOver bool
-	Paused   bool
+	Score          int
+	GameOver       bool
+	Paused         bool
 	ConfirmRestart bool
-	TickRate time.Duration
+	TickRate       time.Duration
 }
 
 func NewGame() *Game {
@@ -208,7 +208,7 @@ func (g *Game) Rotate() {
 
 func (g *Game) HardDrop() {
 	dropHeight := 0
-	
+
 	for {
 		if g.CheckCollision(g.Piece.X, g.Piece.Y+1, g.Piece.Shape) {
 			break
@@ -220,8 +220,21 @@ func (g *Game) HardDrop() {
 	g.Score += dropHeight * 2
 
 	g.LockPiece()
-	
+
 	if !g.GameOver {
 		g.ClearLines()
 	}
+}
+
+func (g *Game) CalculateGhostY() int {
+	ghostY := g.Piece.Y
+
+	for {
+		if g.CheckCollision(g.Piece.X, ghostY+1, g.Piece.Shape) {
+			break
+		}
+		ghostY++
+	}
+
+	return ghostY
 }
