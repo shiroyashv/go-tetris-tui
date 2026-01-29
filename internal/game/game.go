@@ -7,6 +7,8 @@ import (
 	"github.com/shiroyashv/go-tetris-tui/internal/config"
 )
 
+const LockDelayDuration = 500 * time.Millisecond
+
 type Game struct {
 	Grid [config.BoardHeight][config.BoardWidth]int
 
@@ -17,6 +19,8 @@ type Game struct {
 	GameOver       bool
 	Paused         bool
 	ConfirmRestart bool
+	IsLanded       bool
+	LockTimer      time.Time
 	TickRate       time.Duration
 }
 
@@ -48,14 +52,36 @@ func (g *Game) SpawnPiece() {
 	}
 }
 
+func (g *Game) ResetLockTimer() {
+	if g.IsLanded {
+		g.LockTimer = time.Now()
+	}
+}
+
 func (g *Game) Update() {
-	if g.GameOver {
+	if g.GameOver || g.Paused || g.ConfirmRestart {
 		return
 	}
 
 	if !g.CheckCollision(g.Piece.X, g.Piece.Y+1, g.Piece.Shape) {
 		g.Piece.Y++
+		g.IsLanded = false
+		g.LockTimer = time.Time{}
 	} else {
+		if !g.IsLanded {
+			g.IsLanded = true
+			g.LockTimer = time.Now()
+		} else {
+			if time.Since(g.LockTimer) > LockDelayDuration {
+				g.LockPiece()
+
+				if !g.GameOver {
+					g.ClearLines()
+					g.SpawnPiece()
+					g.IsLanded = false
+				}
+			}
+		}
 		g.LockPiece()
 		g.ClearLines()
 	}
@@ -155,6 +181,7 @@ func (g *Game) MoveLeft() {
 	}
 	if !g.CheckCollision(g.Piece.X-1, g.Piece.Y, g.Piece.Shape) {
 		g.Piece.X--
+		g.ResetLockTimer()
 	}
 }
 
@@ -164,6 +191,7 @@ func (g *Game) MoveRight() {
 	}
 	if !g.CheckCollision(g.Piece.X+1, g.Piece.Y, g.Piece.Shape) {
 		g.Piece.X++
+		g.ResetLockTimer()
 	}
 }
 
@@ -201,6 +229,11 @@ func (g *Game) Rotate() {
 			g.Piece.Shape = newShape
 			g.Piece.X += k.x
 			g.Piece.Y += k.y
+
+			if g.CheckCollision(g.Piece.X, g.Piece.Y+1, g.Piece.Shape) {
+				g.IsLanded = true
+				g.ResetLockTimer()
+			}
 			return
 		}
 	}
@@ -220,6 +253,7 @@ func (g *Game) HardDrop() {
 	g.Score += dropHeight * 2
 
 	g.LockPiece()
+	g.IsLanded = false
 
 	if !g.GameOver {
 		g.ClearLines()
