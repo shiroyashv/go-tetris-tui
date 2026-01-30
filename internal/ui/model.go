@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -13,6 +15,12 @@ import (
 )
 
 type tickMsg time.Time
+
+type NetworkInputMsg struct {
+	Command string
+}
+
+var globalConn *net.UDPConn
 
 type Model struct {
 	Game      *game.Game
@@ -29,7 +37,40 @@ func tickCmd(duration time.Duration) tea.Cmd {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tickCmd(m.Game.TickRate)
+	return tea.Batch(
+		tickCmd(m.Game.TickRate),
+		startUDPServer(),
+	)
+}
+
+func startUDPServer() tea.Cmd {
+	return func() tea.Msg {
+		addr, _ := net.ResolveUDPAddr("udp", ":9999")
+		conn, err := net.ListenUDP("udp", addr)
+		if err != nil {
+			return nil
+		}
+
+		return waitForPacket(conn)
+	}
+}
+
+func waitForPacket(conn *net.UDPConn) tea.Msg {
+	if conn == nil {
+		return nil
+	}
+	globalConn = conn
+
+	buf := make([]byte, 64)
+	n, _, err := conn.ReadFromUDP(buf)
+	if err != nil {
+		return nil
+	}
+
+	var data struct{ C string }
+	json.Unmarshal(buf[:n], &data)
+
+	return NetworkInputMsg{Command: data.C}
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -71,18 +112,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.Game.Paused || m.Game.GameOver || m.Game.ConfirmRestart {
 			return m, nil
 		}
-		switch msg.String() {
-		case "left":
-			m.Game.MoveLeft()
-		case "right":
-			m.Game.MoveRight()
-		case "up":
-			m.Game.Rotate()
-		case "down":
-			m.Game.Update()
-		case " ":
-			m.Game.HardDrop()
+	case NetworkInputMsg:
+		if !m.Game.GameOver && !m.Game.Paused {
+			switch msg.Command {
+			case "left":
+				m.Game.MoveLeft()
+			case "right":
+				m.Game.MoveRight()
+			case "down":
+				m.Game.Update()
+			case "up":
+				m.Game.Rotate()
+			case "space":
+				m.Game.HardDrop()
+			}
 		}
+		return m, func() tea.Msg { return waitForPacket(globalConn) }
 	case tickMsg:
 		if !m.Game.Paused && !m.Game.GameOver {
 			m.Game.Update()
