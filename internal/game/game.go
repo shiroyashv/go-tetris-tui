@@ -1,7 +1,6 @@
 package game
 
 import (
-	"math/rand"
 	"time"
 
 	"github.com/shiroyashv/go-tetris-tui/internal/config"
@@ -15,6 +14,7 @@ type Game struct {
 
 	Piece     CurrentPiece
 	NextPiece CurrentPiece
+	Generator *Generator
 
 	Score          int
 	GameOver       bool
@@ -28,10 +28,11 @@ type Game struct {
 
 func NewGame() *Game {
 	g := &Game{
-		TickRate: time.Millisecond * 800,
+		TickRate:  time.Millisecond * 800,
+		Generator: NewGenerator(),
 	}
 
-	preset := AllPieces[rand.Intn(len(AllPieces))]
+	preset := g.Generator.GetNewPiece()
 	g.NextPiece = CurrentPiece{
 		Shape: preset.Shape,
 		Color: preset.Color,
@@ -47,7 +48,7 @@ func (g *Game) SpawnPiece() {
 	g.Piece.Y = -2
 	g.LockResetCount = 0
 
-	preset := AllPieces[rand.Intn(len(AllPieces))]
+	preset := g.Generator.GetNewPiece()
 	g.NextPiece = CurrentPiece{
 		Shape: preset.Shape,
 		Color: preset.Color,
