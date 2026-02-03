@@ -8,6 +8,7 @@ import (
 )
 
 const LockDelayDuration = 500 * time.Millisecond
+const MaxLockResets = 15
 
 type Game struct {
 	Grid [config.BoardHeight][config.BoardWidth]int
@@ -20,6 +21,7 @@ type Game struct {
 	Paused         bool
 	ConfirmRestart bool
 	IsLanded       bool
+	LockResetCount int
 	LockTimer      time.Time
 	TickRate       time.Duration
 }
@@ -40,10 +42,10 @@ func NewGame() *Game {
 }
 
 func (g *Game) SpawnPiece() {
-
 	g.Piece = g.NextPiece
 	g.Piece.X = config.BoardWidth/2 - len(g.Piece.Shape[0])/2
 	g.Piece.Y = -2
+	g.LockResetCount = 0
 
 	preset := AllPieces[rand.Intn(len(AllPieces))]
 	g.NextPiece = CurrentPiece{
@@ -58,7 +60,10 @@ func (g *Game) SpawnPiece() {
 
 func (g *Game) ResetLockTimer() {
 	if g.IsLanded {
-		g.LockTimer = time.Now()
+		if g.LockResetCount < MaxLockResets {
+            g.LockTimer = time.Now()
+            g.LockResetCount++
+        }
 	}
 }
 
@@ -71,6 +76,7 @@ func (g *Game) Update() {
 		g.Piece.Y++
 		g.IsLanded = false
 		g.LockTimer = time.Time{}
+		g.LockResetCount = 0
 	} else {
 		if !g.IsLanded {
 			g.IsLanded = true
