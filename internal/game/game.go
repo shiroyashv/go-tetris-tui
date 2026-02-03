@@ -42,7 +42,7 @@ func NewGame() *Game {
 func (g *Game) SpawnPiece() {
 
 	g.Piece = g.NextPiece
-	g.Piece.X = config.BoardWidth/2 - 2
+	g.Piece.X = config.BoardWidth/2 - len(g.Piece.Shape[0])/2
 	g.Piece.Y = -2
 
 	preset := AllPieces[rand.Intn(len(AllPieces))]
@@ -50,6 +50,10 @@ func (g *Game) SpawnPiece() {
 		Shape: preset.Shape,
 		Color: preset.Color,
 	}
+
+	if g.CheckCollision(g.Piece.X, g.Piece.Y, g.Piece.Shape) {
+        g.GameOver = true
+    }
 }
 
 func (g *Game) ResetLockTimer() {
@@ -82,8 +86,6 @@ func (g *Game) Update() {
 				}
 			}
 		}
-		g.LockPiece()
-		g.ClearLines()
 	}
 }
 
@@ -166,13 +168,6 @@ func (g *Game) LockPiece() {
 			}
 		}
 	}
-	g.ClearLines()
-
-	g.SpawnPiece()
-
-	if g.CheckCollision(g.Piece.X, g.Piece.Y, g.Piece.Shape) {
-		g.GameOver = true
-	}
 }
 
 func (g *Game) MoveLeft() {
@@ -253,10 +248,11 @@ func (g *Game) HardDrop() {
 	g.Score += dropHeight * 2
 
 	g.LockPiece()
-	g.IsLanded = false
 
 	if !g.GameOver {
 		g.ClearLines()
+        g.SpawnPiece()
+        g.IsLanded = false
 	}
 }
 
