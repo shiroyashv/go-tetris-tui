@@ -47,6 +47,7 @@ func (g *Game) SpawnPiece() {
 	g.Piece.X = config.BoardWidth/2 - len(g.Piece.Shape[0])/2
 	g.Piece.Y = -2
 	g.LockResetCount = 0
+	g.Piece.Rotation = 0
 
 	preset := g.Generator.GetNewPiece()
 	g.NextPiece = CurrentPiece{
@@ -206,6 +207,10 @@ func (g *Game) Rotate() {
 	rows := len(originalShape)
 	cols := len(originalShape[0])
 
+	if len(originalShape) == 2 {
+         return 
+    }
+
 	newShape := make(Tetromino, rows)
 	for i := range newShape {
 		newShape[i] = make([]int, cols)
@@ -217,28 +222,34 @@ func (g *Game) Rotate() {
 		}
 	}
 
-	kicks := []struct{ x, y int }{
-		{0, 0},
-		{1, 0},
-		{-1, 0},
-		{2, 0},
-		{-2, 0},
-	}
+	currentRot := g.Piece.Rotation
+    nextRot := (currentRot + 1) % 4
 
-	for _, k := range kicks {
+	var kicks []Point
+    
+    if len(originalShape) == 4 {
+        kicks = IWallKicks[currentRot][nextRot]
+    } else {
+        kicks = JLSTZWallKicks[currentRot][nextRot]
+    }
 
-		if !g.CheckCollision(g.Piece.X+k.x, g.Piece.Y+k.y, newShape) {
-			g.Piece.Shape = newShape
-			g.Piece.X += k.x
-			g.Piece.Y += k.y
+    for _, kick := range kicks {
+        
+        testX := g.Piece.X + kick.X
+        testY := g.Piece.Y + kick.Y 
 
-			if g.CheckCollision(g.Piece.X, g.Piece.Y+1, g.Piece.Shape) {
-				g.IsLanded = true
-				g.ResetLockTimer()
-			}
-			return
-		}
-	}
+        if !g.CheckCollision(testX, testY, newShape) {
+            g.Piece.Shape = newShape
+            g.Piece.X = testX
+            g.Piece.Y = testY
+            g.Piece.Rotation = nextRot 
+            
+            if g.IsLanded {
+                 g.ResetLockTimer()
+            }
+            return
+        }
+    }
 }
 
 func (g *Game) HardDrop() {
